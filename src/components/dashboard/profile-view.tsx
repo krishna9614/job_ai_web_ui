@@ -112,7 +112,7 @@ function Info({ label, value, full }: { label: string; value: ReactNode; full?: 
   );
 }
 
-function ExternalValue({ url }: { url: string | null }) {
+function externalLink(url: string | null): ReactNode {
   if (!url) return null;
   return (
     <a href={url} target="_blank" rel="noreferrer">
@@ -188,8 +188,8 @@ export function ProfileSections({ profile, onEdit }: { profile: Profile; onEdit:
       </SectionCard>
       <SectionCard id="links" onEdit={onEdit}>
         <dl className="info-grid">
-          <Info label="LinkedIn" value={<ExternalValue url={profile.linkedin_url} />} />
-          <Info label="GitHub" value={<ExternalValue url={profile.github_url} />} />
+          <Info label="LinkedIn" value={externalLink(profile.linkedin_url)} />
+          <Info label="GitHub" value={externalLink(profile.github_url)} />
         </dl>
       </SectionCard>
       <p style={{ fontSize: 12.5, color: "var(--faint)", textAlign: "right" }}>
