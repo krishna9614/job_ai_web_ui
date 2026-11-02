@@ -35,7 +35,8 @@ export function VerifyEmailCard() {
   const resend = useResendVerification();
   const [typedEmail, setTypedEmail] = useState("");
   const [emailError, setEmailError] = useState<string>();
-  const [cooldown, setCooldown] = useState(0);
+  // Supabase allows one verification email per minute, and signup has just sent one.
+  const [cooldown, setCooldown] = useState(pendingEmail ? RESEND_COOLDOWN_SECONDS : 0);
   const email = pendingEmail;
 
   useEffect(() => {
