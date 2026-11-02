@@ -568,6 +568,8 @@ button { font-family: inherit; }
 .input .toggle { background: none; border: 0; padding: 0; display: grid; place-items: center; cursor: pointer; color: var(--muted); }
 .input .cc select { font-weight: 700; color: var(--dark); width: auto; }
 .field-err { font-size: 12.5px; color: var(--danger); margin-top: 6px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.field label .req { color: var(--danger); margin-left: 3px; font-weight: 800; }
+.check .req { color: var(--danger); margin-left: 3px; font-weight: 800; }
 .check input { position: absolute; opacity: 0; pointer-events: none; }
 .check:has(input:focus-visible) .box { box-shadow: 0 0 0 4px rgba(21,150,109,.2); }
 .tags input { flex: 1; min-width: 120px; border: 0; outline: 0; background: transparent; font: inherit; font-size: 13px; color: var(--text); padding: 4px 2px; }

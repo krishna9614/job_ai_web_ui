@@ -11,7 +11,7 @@ import { TextField } from "@/components/forms/field";
 import { PasswordField } from "@/components/forms/password-input";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
-import { useLogin } from "@/hooks/use-auth";
+import { useLogin, useResendVerification } from "@/hooks/use-auth";
 import { ApiError } from "@/lib/api/errors";
 import { safeNextPath } from "@/lib/navigation";
 import { loginSchema, type LoginValues } from "@/lib/validation/auth";
@@ -22,6 +22,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useLogin();
+  const resend = useResendVerification();
   const sessionExpired = useAuthStore((s) => s.sessionExpired);
   const [info, setInfo] = useState<string | null>(null);
 
@@ -30,6 +31,7 @@ export function LoginForm() {
     control,
     handleSubmit,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -39,12 +41,15 @@ export function LoginForm() {
 
   const onSubmit = handleSubmit((values) => {
     setInfo(null);
+    resend.reset();
     login.mutate(values, {
       onSuccess: () => router.replace(safeNextPath(searchParams.get("next")) ?? "/dashboard"),
     });
   });
 
   const error = login.error instanceof ApiError ? login.error : null;
+  const unverified = error?.status === 403 && /confirm/i.test(error.message);
+  const resendError = resend.error instanceof ApiError ? resend.error : null;
 
   return (
     <div className="auth-card">
@@ -55,7 +60,26 @@ export function LoginForm() {
       {sessionExpired && !error && !info ? (
         <Notice tone="info">Your session has ended. Please log in again.</Notice>
       ) : null}
-      {error ? (
+      {error && unverified ? (
+        <Notice tone={resend.isSuccess ? "ok" : "err"}>
+          {resend.isSuccess ? (
+            resend.data.detail
+          ) : (
+            <>
+              Please verify your email before logging in.{" "}
+              <button
+                type="button"
+                className="link-btn"
+                disabled={resend.isPending}
+                onClick={() => resend.mutate(getValues("email"))}
+              >
+                {resend.isPending ? "Sending…" : "Resend verification email"}
+              </button>
+              {resendError ? <> — {resendError.message}</> : null}
+            </>
+          )}
+        </Notice>
+      ) : error ? (
         <Notice tone="err">
           {error.status === 401 ? "Incorrect email or password. Please try again." : error.message}
         </Notice>
@@ -75,6 +99,7 @@ export function LoginForm() {
           type="email"
           autoComplete="email"
           placeholder="you@example.com"
+          required
           error={errors.email?.message}
           {...register("email")}
         />
@@ -83,6 +108,7 @@ export function LoginForm() {
           label="Password"
           autoComplete="current-password"
           placeholder="Enter your password"
+          required
           error={errors.password?.message}
           {...register("password")}
         />

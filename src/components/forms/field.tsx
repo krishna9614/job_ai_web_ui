@@ -9,15 +9,20 @@ interface FieldShellProps {
   error?: string;
   hint?: ReactNode;
   className?: string;
+  /** Shows the red required marker; set it only where validation actually requires a value. */
+  required?: boolean;
   children: ReactNode;
 }
 
 /** Label + control + error, matching the design's `.field` anatomy. */
-export function FieldShell({ id, label, labelExtra, error, hint, className, children }: FieldShellProps) {
+export function FieldShell({ id, label, labelExtra, error, hint, className, required, children }: FieldShellProps) {
   return (
     <div className={cn("field", className)}>
       <label htmlFor={id}>
-        <span>{label}</span>
+        <span>
+          {label}
+          {required ? <RequiredMark /> : null}
+        </span>
         {labelExtra}
       </label>
       {children}
@@ -30,6 +35,17 @@ export function FieldShell({ id, label, labelExtra, error, hint, className, chil
         <div className="hint">{hint}</div>
       ) : null}
     </div>
+  );
+}
+
+export function RequiredMark() {
+  return (
+    <>
+      <span className="req" aria-hidden>
+        *
+      </span>
+      <span className="sr-only"> (required)</span>
+    </>
   );
 }
 
@@ -82,16 +98,26 @@ export function TextField({
   trailing,
   boxClassName,
   fieldClassName,
+  required,
   ...inputProps
 }: TextFieldProps) {
   return (
-    <FieldShell id={id} label={label} labelExtra={labelExtra} error={error} hint={hint} className={fieldClassName}>
+    <FieldShell
+      id={id}
+      label={label}
+      labelExtra={labelExtra}
+      error={error}
+      hint={hint}
+      className={fieldClassName}
+      required={required}
+    >
       <InputBox icon={icon} state={state} error={error} leading={leading} trailing={trailing} boxClassName={boxClassName}>
         <input
           id={id}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
           readOnly={state === "locked" || inputProps.readOnly}
+          aria-required={required || undefined}
           {...inputProps}
         />
       </InputBox>
@@ -118,12 +144,13 @@ export function SelectField({
   options,
   placeholder,
   fieldClassName,
+  required,
   ...selectProps
 }: SelectFieldProps) {
   return (
-    <FieldShell id={id} label={label} labelExtra={labelExtra} error={error} className={fieldClassName}>
+    <FieldShell id={id} label={label} labelExtra={labelExtra} error={error} className={fieldClassName} required={required}>
       <InputBox icon={icon} error={error} trailing={<ChevronState />}>
-        <select id={id} {...selectProps}>
+        <select id={id} aria-required={required || undefined} {...selectProps}>
           {placeholder !== undefined ? <option value="">{placeholder}</option> : null}
           {options.map((o) => (
             <option key={o} value={o}>

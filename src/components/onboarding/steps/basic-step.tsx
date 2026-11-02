@@ -163,6 +163,7 @@ export function BasicStep() {
           <TextField
             id="ob-name"
             label="Full name"
+            required
             icon={User}
             autoComplete="name"
             placeholder="Jessica Morgan"

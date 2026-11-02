@@ -2,6 +2,7 @@
 import { ArrowRight, Bot, Briefcase, Calendar, CircleCheck, FileText, Globe, LayoutDashboard, Mail, Minus, Quote, Search, ShieldCheck, Sparkles, Star, Target, TrendingUp, Upload, UserCheck, UserPlus, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SUPPORT_HREF } from "@/lib/config";
 import { LeafShape, LinkedinBrandIcon, LinkedinIcon, SprigShape } from "@/components/icons/brand";
 
 export const metadata: Metadata = { title: { absolute: "JobAI — Your Personal AI Job Application Assistant" } };
@@ -198,7 +199,7 @@ export default function LandingPage() {
             <div className="help-card">
               <b>Still have questions?</b>
               <p>Chat with our support team — average reply time under 5 minutes.</p>
-              <Link className="btn btn-primary btn-sm" href="/signup">Contact Support <span className="arrow"><ArrowRight className="ic ic-xs" /></span></Link>
+              <a className="btn btn-primary btn-sm" href={SUPPORT_HREF}>Contact Support <span className="arrow"><ArrowRight className="ic ic-xs" /></span></a>
             </div>
           </div>
           <div className="faq">

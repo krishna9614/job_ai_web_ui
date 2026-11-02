@@ -2,6 +2,7 @@
 
 import { ArrowRight, Check, CircleCheck, CircleHelp, Heart } from "lucide-react";
 import Link from "next/link";
+import { SUPPORT_HREF } from "@/lib/config";
 import { useProfile } from "@/hooks/use-profile";
 import { Leaves } from "@/components/layout/auth-shell";
 import { OnboardingTop, StrengthRing } from "../onboarding-shell";
@@ -47,7 +48,7 @@ export function CompleteStep() {
         right={
           <>
             <CircleHelp className="ic ic-sm" />
-            Need help? <Link href="mailto:support@jobai.com">Contact support</Link>
+            Need help? <a href={SUPPORT_HREF}>Contact support</a>
           </>
         }
       />

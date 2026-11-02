@@ -2,6 +2,7 @@
 
 import { CircleCheck, Pencil, RefreshCw, Sparkles, UserPlus } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Leaves } from "@/components/layout/auth-shell";
 import { Button } from "@/components/ui/button";
@@ -9,11 +10,21 @@ import { Notice } from "@/components/ui/notice";
 import { useCurrentUser } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { ApiError } from "@/lib/api/errors";
+import { ChangeEmailCard } from "./change-email-card";
 import { DashboardHeader } from "./dashboard-header";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { ProfileForm } from "./profile-form";
 import { AccountCard, ProfileSections, ProfileSummaryCard } from "./profile-view";
 import { PROFILE_SECTIONS, type SectionId } from "./sections";
+
+const EMAIL_NOTICES: Record<string, { tone: "ok" | "info" | "err"; text: string }> = {
+  changed: { tone: "ok", text: "Your email address has been updated." },
+  pending: {
+    tone: "info",
+    text: "Email confirmed. Open the link we sent to your other address to finish changing your email.",
+  },
+  invalid: { tone: "err", text: "That email confirmation link is invalid, has expired or has already been used." },
+};
 
 type Mode = { kind: "view" } | { kind: "edit"; section: SectionId | null } | { kind: "create" };
 
@@ -26,6 +37,8 @@ export function ProfileDashboard() {
   const profile = useProfile();
   const [mode, setMode] = useState<Mode>({ kind: "view" });
   const [success, setSuccess] = useState<string | null>(null);
+  const emailNotice = EMAIL_NOTICES[useSearchParams().get("email") ?? ""];
+  const [emailNoticeDismissed, setEmailNoticeDismissed] = useState(false);
 
   useEffect(() => {
     if (!success) return;
@@ -75,6 +88,11 @@ export function ProfileDashboard() {
             ) : null}
           </div>
 
+          {emailNotice && !emailNoticeDismissed ? (
+            <Notice tone={emailNotice.tone} onDismiss={() => setEmailNoticeDismissed(true)}>
+              {emailNotice.text}
+            </Notice>
+          ) : null}
           {success ? (
             <Notice tone="ok" onDismiss={() => setSuccess(null)}>
               {success}
@@ -105,6 +123,7 @@ export function ProfileDashboard() {
               <aside className="dash-side">
                 <ProfileSummaryCard profile={profile.data ?? null} user={user.data} />
                 <AccountCard user={user.data} />
+                <ChangeEmailCard currentEmail={user.data.email} />
               </aside>
               {mode.kind === "edit" && profile.data ? (
                 <ProfileForm

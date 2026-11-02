@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOnboardingStore } from "@/stores/onboarding-store";
-import type { Credentials } from "@/types/api";
+import type { Credentials, SignupInput } from "@/types/api";
 import { queryKeys } from "./query-keys";
 
 /** GET /users/me, mirrored into the auth store so any component can read the session user. */
@@ -41,7 +41,7 @@ export function useSignup() {
   const setUser = useAuthStore((s) => s.setUser);
   const setPendingVerificationEmail = useAuthStore((s) => s.setPendingVerificationEmail);
   return useMutation({
-    mutationFn: (input: Credentials) => authService.signup(input),
+    mutationFn: (input: SignupInput) => authService.signup(input),
     onSuccess: (result, input) => {
       queryClient.clear();
       if (result.email_confirmation_required) {
@@ -66,4 +66,29 @@ export function useLogout() {
       resetOnboarding();
     },
   });
+}
+
+export function useForgotPassword() {
+  return useMutation({ mutationFn: (email: string) => authService.forgotPassword(email) });
+}
+
+export function useResendVerification() {
+  return useMutation({ mutationFn: (email: string) => authService.resendVerification(email) });
+}
+
+export function useResetPassword() {
+  const queryClient = useQueryClient();
+  const reset = useAuthStore((s) => s.reset);
+  return useMutation({
+    mutationFn: (password: string) => authService.resetPassword(password),
+    onSuccess: () => {
+      // Every session was revoked by the backend.
+      queryClient.clear();
+      reset();
+    },
+  });
+}
+
+export function useRequestEmailChange() {
+  return useMutation({ mutationFn: (email: string) => authService.requestEmailChange(email) });
 }
