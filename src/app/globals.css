@@ -588,7 +588,7 @@ button { font-family: inherit; }
 .notice.err .tip-ic { background: var(--danger); }
 .notice.info { background: #FCFBF7; border: 1px solid #EEF2EE; color: var(--muted); }
 .notice.info .tip-ic { background: var(--sage); color: var(--primary); }
-.notice .grow { flex: 1; }
+.notice .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .notice .x { background: none; border: 0; cursor: pointer; color: inherit; opacity: .6; display: grid; place-items: center; }
 
 @keyframes jobai-spin { to { transform: rotate(360deg); } }
@@ -618,7 +618,7 @@ button { font-family: inherit; }
 .dash-head p { color: var(--muted); font-size: 15px; margin-top: 6px; }
 .dash-head .actions { display: flex; gap: 10px; }
 .dash-grid { display: grid; grid-template-columns: 340px 1fr; gap: 24px; align-items: start; }
-.dash-side { display: grid; gap: 20px; position: sticky; top: 24px; }
+.dash-side { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; position: sticky; top: 24px; min-width: 0; }
 .dash-sections { display: grid; gap: 20px; }
 
 .p-card { padding: 28px 24px 24px; text-align: center; }
