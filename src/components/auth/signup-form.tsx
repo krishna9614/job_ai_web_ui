@@ -14,7 +14,7 @@ import { Notice } from "@/components/ui/notice";
 import { useSignup } from "@/hooks/use-auth";
 import { ApiError } from "@/lib/api/errors";
 import { signupSchema, type SignupValues } from "@/lib/validation/auth";
-import { PasswordRules } from "./password-rules";
+import { MissingPasswordRules } from "./password-rules";
 import { SocialButtons, socialUnavailableMessage } from "./social-buttons";
 
 export function SignupForm() {
@@ -36,6 +36,8 @@ export function SignupForm() {
   const terms = useWatch({ control, name: "terms" });
   const email = useWatch({ control, name: "email" });
   const password = useWatch({ control, name: "password" });
+  // Unmet password rules are listed by MissingPasswordRules, so the field shows no duplicate message.
+  const passwordRulesFailed = errors.password?.type === "custom";
   const emailOk = dirtyFields.email && !errors.email && signupSchema.shape.email.safeParse(email).success;
 
   const onSubmit = handleSubmit(({ fullName, email, password }) => {
@@ -107,10 +109,11 @@ export function SignupForm() {
           placeholder="Create a password"
           required
           aria-describedby="signup-password-rules"
-          error={errors.password?.message ?? error?.fieldErrors.password}
+          invalid={passwordRulesFailed}
+          error={(passwordRulesFailed ? undefined : errors.password?.message) ?? error?.fieldErrors.password}
           {...register("password")}
         />
-        <PasswordRules id="signup-password-rules" value={password} />
+        <MissingPasswordRules id="signup-password-rules" value={password} />
         <div style={{ margin: "20px 0 22px" }}>
           <Checkbox checked={terms} onChange={(e) => setValue("terms", e.target.checked, { shouldValidate: true })}>
             I agree to the <Link href="#">Terms of Service</Link> and <Link href="#">Privacy Policy</Link>

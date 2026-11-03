@@ -53,6 +53,8 @@ type InputBoxProps = {
   icon?: ComponentType<{ className?: string }>;
   state?: "ok" | "locked" | "";
   error?: string;
+  /** Red border without an inline message (e.g. when a checklist explains the problem). */
+  invalid?: boolean;
   leading?: ReactNode;
   trailing?: ReactNode;
   boxClassName?: string;
@@ -62,13 +64,14 @@ export function InputBox({
   icon: Icon,
   state = "",
   error,
+  invalid,
   leading,
   trailing,
   boxClassName,
   children,
 }: InputBoxProps & { children: ReactNode }) {
   return (
-    <div className={cn("input", state, error && "err", boxClassName)}>
+    <div className={cn("input", state, (error || invalid) && "err", boxClassName)}>
       {leading}
       {Icon ? <Icon className="ic ic-sm" /> : null}
       {children}
@@ -118,6 +121,7 @@ export function TextField({
           aria-describedby={error ? `${id}-error` : undefined}
           readOnly={state === "locked" || inputProps.readOnly}
           aria-required={required || undefined}
+          suppressHydrationWarning
           {...inputProps}
         />
       </InputBox>
@@ -150,7 +154,7 @@ export function SelectField({
   return (
     <FieldShell id={id} label={label} labelExtra={labelExtra} error={error} className={fieldClassName} required={required}>
       <InputBox icon={icon} error={error} trailing={<ChevronState />}>
-        <select id={id} aria-required={required || undefined} {...selectProps}>
+        <select id={id} aria-required={required || undefined} suppressHydrationWarning {...selectProps}>
           {placeholder !== undefined ? <option value="">{placeholder}</option> : null}
           {options.map((o) => (
             <option key={o} value={o}>

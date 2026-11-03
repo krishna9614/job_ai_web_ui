@@ -46,6 +46,7 @@ export function Button({
       className={cn(buttonVariants({ variant, size, block }), className)}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
+      suppressHydrationWarning
       {...props}
     >
       {children}
