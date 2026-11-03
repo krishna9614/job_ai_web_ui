@@ -12,7 +12,7 @@ export const PASSWORD_RULES = [
   { label: "One uppercase letter (A–Z)", test: (v: string) => /[A-Z]/.test(v) },
   { label: "One lowercase letter (a–z)", test: (v: string) => /[a-z]/.test(v) },
   { label: "One number (0–9)", test: (v: string) => /[0-9]/.test(v) },
-  { label: "One special character (e.g. ! @ # $)", test: (v: string) => /[^A-Za-z0-9]/.test(v) },
+  { label: "One special character (! @ # $)", test: (v: string) => /[^A-Za-z0-9]/.test(v) },
 ] as const;
 
 export const PASSWORD_REQUIREMENTS_TEXT =
