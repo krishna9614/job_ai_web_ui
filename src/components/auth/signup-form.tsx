@@ -36,6 +36,8 @@ export function SignupForm() {
   const terms = useWatch({ control, name: "terms" });
   const email = useWatch({ control, name: "email" });
   const password = useWatch({ control, name: "password" });
+  // Unmet password rules are shown by the checklist, which only appears once typing starts.
+  const passwordRulesFailed = errors.password?.type === "custom";
   const emailOk = dirtyFields.email && !errors.email && signupSchema.shape.email.safeParse(email).success;
 
   const onSubmit = handleSubmit(({ fullName, email, password }) => {
@@ -106,11 +108,12 @@ export function SignupForm() {
           autoComplete="new-password"
           placeholder="Create a password"
           required
-          aria-describedby="signup-password-rules"
-          error={errors.password?.message ?? error?.fieldErrors.password}
+          aria-describedby={password ? "signup-password-rules" : undefined}
+          invalid={passwordRulesFailed}
+          error={(passwordRulesFailed ? undefined : errors.password?.message) ?? error?.fieldErrors.password}
           {...register("password")}
         />
-        <PasswordRules id="signup-password-rules" value={password} />
+        {password ? <PasswordRules id="signup-password-rules" value={password} invalid={passwordRulesFailed} /> : null}
         <div style={{ margin: "20px 0 22px" }}>
           <Checkbox checked={terms} onChange={(e) => setValue("terms", e.target.checked, { shouldValidate: true })}>
             I agree to the <Link href="#">Terms of Service</Link> and <Link href="#">Privacy Policy</Link>

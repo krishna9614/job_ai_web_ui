@@ -11,6 +11,8 @@ type Props = Omit<ComponentProps<"input">, "id" | "type"> & {
   error?: string;
   hint?: ReactNode;
   state?: "ok" | "";
+  /** Red border without an inline message. */
+  invalid?: boolean;
   stateIcon?: ReactNode;
   /** Blocks copy, cut, paste and drop (used on the reset-password fields). */
   blockClipboard?: boolean;
@@ -25,6 +27,7 @@ export function PasswordField({
   hint,
   state = "",
   stateIcon,
+  invalid,
   required,
   blockClipboard,
   onClipboardBlocked,
@@ -45,6 +48,7 @@ export function PasswordField({
         icon={Lock}
         state={state}
         error={error}
+        invalid={invalid}
         trailing={
           stateIcon ?? (
             <button
@@ -52,6 +56,7 @@ export function PasswordField({
               className="toggle"
               onClick={() => setVisible((v) => !v)}
               aria-label={visible ? "Hide password" : "Show password"}
+              suppressHydrationWarning
             >
               <Toggle className="ic ic-sm" />
             </button>
@@ -61,9 +66,10 @@ export function PasswordField({
         <input
           id={id}
           type={visible ? "text" : "password"}
-          aria-invalid={error ? true : undefined}
+          aria-invalid={error || invalid ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
           aria-required={required || undefined}
+          suppressHydrationWarning
           {...inputProps}
           {...clipboardHandlers}
         />

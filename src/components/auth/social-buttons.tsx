@@ -13,7 +13,7 @@ export function SocialButtons({ onSelect }: { onSelect: (provider: string) => vo
   return (
     <div className="socials-row">
       {PROVIDERS.map(({ name, Icon }) => (
-        <button key={name} type="button" className="social-btn" onClick={() => onSelect(name)}>
+        <button key={name} type="button" className="social-btn" onClick={() => onSelect(name)} suppressHydrationWarning>
           <Icon className="ic-fill" />
           {name}
         </button>
