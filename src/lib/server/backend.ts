@@ -40,3 +40,83 @@ export function cookieOptions(maxAge?: number) {
     ...(maxAge ? { maxAge } : {}),
   };
 }
+
+export const REFRESH_TOKEN_COOKIE = "jobai_refresh_token";
+/** Marks a "Remember me" login so refreshed tokens keep the persistent lifetime. */
+export const REMEMBER_COOKIE = "jobai_remember";
+/** Short-lived session from an emailed reset link; only usable for /auth/password/reset. */
+export const RECOVERY_TOKEN_COOKIE = "jobai_recovery_token";
+
+export const REMEMBER_ME_MAX_AGE = 60 * 60 * 24 * 30;
+const RECOVERY_MAX_AGE = 60 * 15;
+
+export interface BackendSession {
+  access_token: string;
+  refresh_token: string | null;
+  expires_in: number | null;
+}
+
+type CookieJar = { cookies: NextResponse["cookies"] };
+
+/**
+ * Stores the Supabase session in HttpOnly cookies. With "Remember me" the cookies last 30 days
+ * (the refresh token renews the short-lived access token); otherwise they end with the browser.
+ */
+export function setSessionCookies(response: CookieJar, session: BackendSession, remember: boolean) {
+  const maxAge = remember ? REMEMBER_ME_MAX_AGE : undefined;
+  response.cookies.set(ACCESS_TOKEN_COOKIE, session.access_token, cookieOptions(maxAge));
+  if (session.refresh_token) {
+    response.cookies.set(REFRESH_TOKEN_COOKIE, session.refresh_token, cookieOptions(maxAge));
+  }
+  if (remember) response.cookies.set(REMEMBER_COOKIE, "1", cookieOptions(maxAge));
+  else response.cookies.delete(REMEMBER_COOKIE);
+}
+
+export function clearSessionCookies(response: CookieJar) {
+  response.cookies.delete(ACCESS_TOKEN_COOKIE);
+  response.cookies.delete(REFRESH_TOKEN_COOKIE);
+  response.cookies.delete(REMEMBER_COOKIE);
+}
+
+export function setRecoveryCookie(response: CookieJar, token: string) {
+  response.cookies.set(RECOVERY_TOKEN_COOKIE, token, { ...cookieOptions(RECOVERY_MAX_AGE), path: "/api/auth" });
+}
+
+export function clearRecoveryCookie(response: CookieJar) {
+  response.cookies.set(RECOVERY_TOKEN_COOKIE, "", { ...cookieOptions(), path: "/api/auth", maxAge: 0 });
+}
+
+/** POST JSON to the backend; returns null when it is unreachable. */
+export async function postBackend(path: string, body?: unknown, token?: string): Promise<Response | null> {
+  try {
+    return await fetch(backendUrl(path), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch {
+    return null;
+  }
+}
+
+/** Exchanges a refresh token for a new session (refresh tokens are single use). */
+export async function refreshSession(refreshToken: string): Promise<BackendSession | null> {
+  const response = await postBackend("auth/refresh", { refresh_token: refreshToken });
+  if (!response?.ok) return null;
+  const data = (await readJson(response)) as { session?: BackendSession } | null;
+  return data?.session?.access_token ? data.session : null;
+}
+
+export async function readBody(request: Request): Promise<Record<string, unknown> | null> {
+  try {
+    const body = (await request.json()) as unknown;
+    return body && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}

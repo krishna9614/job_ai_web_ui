@@ -126,8 +126,8 @@ export function ExperienceStep() {
             </button>
           </div>
           <div className="grid-3">
-            <TextField id="exp-company" label="Company name" icon={Building} value={editing.company} onChange={(e) => set({ company: e.target.value })} error={error && !editing.company.trim() ? "Required" : undefined} />
-            <TextField id="exp-title" label="Job title" icon={Briefcase} value={editing.title} onChange={(e) => set({ title: e.target.value })} error={error && !editing.title.trim() ? "Required" : undefined} />
+            <TextField id="exp-company" label="Company name" required icon={Building} value={editing.company} onChange={(e) => set({ company: e.target.value })} error={error && !editing.company.trim() ? "Required" : undefined} />
+            <TextField id="exp-title" label="Job title" required icon={Briefcase} value={editing.title} onChange={(e) => set({ title: e.target.value })} error={error && !editing.title.trim() ? "Required" : undefined} />
             <SelectField id="exp-type" label="Employment type" options={TYPES} value={editing.employmentType} onChange={(e) => set({ employmentType: e.target.value })} />
             <TextField id="exp-start" label="Start date" icon={Calendar} type="month" value={editing.start} onChange={(e) => set({ start: e.target.value })} />
             <TextField

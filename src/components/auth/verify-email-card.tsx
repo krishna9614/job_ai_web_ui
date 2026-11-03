@@ -2,10 +2,22 @@
 
 import { ExternalLink, Mail, RefreshCw, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { TextField } from "@/components/forms/field";
 import { Notice } from "@/components/ui/notice";
+import { useResendVerification } from "@/hooks/use-auth";
+import { ApiError } from "@/lib/api/errors";
 import { maskEmail } from "@/lib/profile/format";
+import { forgotSchema } from "@/lib/validation/auth";
 import { useAuthStore } from "@/stores/auth-store";
+
+const RESEND_COOLDOWN_SECONDS = 60;
+
+const LINK_STATUS: Record<string, string> = {
+  invalid: "This verification link is invalid, has expired or has already been used. Request a new one below.",
+  unavailable: "We couldn't reach JobAI to verify your email. Please try the link again shortly.",
+};
 
 const INBOXES: Record<string, { label: string; url: string }> = {
   "gmail.com": { label: "Open Gmail", url: "https://mail.google.com/" },
@@ -17,8 +29,38 @@ const INBOXES: Record<string, { label: string; url: string }> = {
 };
 
 export function VerifyEmailCard() {
-  const email = useAuthStore((s) => s.pendingVerificationEmail);
-  const [info, setInfo] = useState<string | null>(null);
+  const pendingEmail = useAuthStore((s) => s.pendingVerificationEmail);
+  const setPendingEmail = useAuthStore((s) => s.setPendingVerificationEmail);
+  const linkStatus = LINK_STATUS[useSearchParams().get("status") ?? ""];
+  const resend = useResendVerification();
+  const [typedEmail, setTypedEmail] = useState("");
+  const [emailError, setEmailError] = useState<string>();
+  // Supabase allows one verification email per minute, and signup has just sent one.
+  const [cooldown, setCooldown] = useState(pendingEmail ? RESEND_COOLDOWN_SECONDS : 0);
+  const email = pendingEmail;
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  const onResend = () => {
+    const target = email ?? typedEmail.trim();
+    const parsed = forgotSchema.shape.email.safeParse(target);
+    if (!parsed.success) {
+      setEmailError(parsed.error.issues[0]?.message);
+      return;
+    }
+    setEmailError(undefined);
+    resend.mutate(parsed.data, {
+      onSuccess: () => {
+        setPendingEmail(parsed.data);
+        setCooldown(RESEND_COOLDOWN_SECONDS);
+      },
+    });
+  };
+  const resendError = resend.error instanceof ApiError ? resend.error : null;
   const inbox = email ? INBOXES[email.split("@")[1]?.toLowerCase() ?? ""] : undefined;
 
   return (
@@ -45,11 +87,29 @@ export function VerifyEmailCard() {
         <Mail className="ic ic-sm" style={{ color: "var(--accent)" }} />
         {email ? maskEmail(email) : "your email address"}
       </span>
-      {info ? (
-        <Notice tone="info" onDismiss={() => setInfo(null)}>
-          {info}
+      {linkStatus && !resend.isSuccess ? <Notice tone="err">{linkStatus}</Notice> : null}
+      {resend.isSuccess ? (
+        <Notice tone="ok" onDismiss={resend.reset}>
+          {resend.data.detail}
         </Notice>
       ) : null}
+      {resendError ? <Notice tone="err">{resendError.message}</Notice> : null}
+      {email ? null : (
+        <div style={{ textAlign: "left", width: "100%" }}>
+          <TextField
+            id="verify-email"
+            label="Email address"
+            icon={Mail}
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            required
+            value={typedEmail}
+            error={emailError}
+            onChange={(e) => setTypedEmail(e.target.value)}
+          />
+        </div>
+      )}
       <a className="btn btn-primary btn-block" href={inbox?.url ?? "mailto:"} target="_blank" rel="noreferrer">
         {inbox?.label ?? "Open email app"}{" "}
         <span className="arrow">
@@ -66,24 +126,22 @@ export function VerifyEmailCard() {
         <div>
           <i>2</i>
           <span>
-            Click <b style={{ color: "var(--text)" }}>“Verify my email”</b> — link expires in 24h
+            Click <b style={{ color: "var(--text)" }}>“Verify my email”</b> — the link works once
           </span>
         </div>
         <div>
           <i>3</i>
           <span>
-            Come back here and <Link href="/login" style={{ color: "var(--primary)", fontWeight: 700 }}>log in</Link> to finish setting up your profile
+            You’ll be signed in to finish setting up your profile, or{" "}
+            <Link href="/login" style={{ color: "var(--primary)", fontWeight: 700 }}>log in</Link> here
           </span>
         </div>
       </div>
       <p className="alt">
         Didn’t receive the email?{" "}
-        <button
-          type="button"
-          className="link-btn"
-          onClick={() => setInfo("Resending isn't available yet. Check your spam folder, or sign up again in a few minutes.")}
-        >
-          <RefreshCw className="ic ic-xs" style={{ verticalAlign: "-2px" }} /> Resend email
+        <button type="button" className="link-btn" onClick={onResend} disabled={resend.isPending || cooldown > 0}>
+          <RefreshCw className="ic ic-xs" style={{ verticalAlign: "-2px" }} />{" "}
+          {resend.isPending ? "Sending…" : cooldown > 0 ? `Resend in ${cooldown}s` : "Resend email"}
         </button>
       </p>
       <p style={{ fontSize: 12.5, color: "var(--faint)", marginTop: 8 }}>

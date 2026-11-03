@@ -123,7 +123,7 @@ export function ProfileForm({ profile, focusSection, onCancel, onSaved }: Props)
 
       <SectionCard id="personal" action={<span className="char-count">* Required</span>}>
         <div className="form-grid">
-          <TextField id="pf-first" label="First name *" icon={User} autoComplete="given-name" error={errors.first_name?.message} {...register("first_name")} />
+          <TextField id="pf-first" label="First name" required icon={User} autoComplete="given-name" error={errors.first_name?.message} {...register("first_name")} />
           <TextField id="pf-middle" label="Middle name" autoComplete="additional-name" error={errors.middle_name?.message} {...register("middle_name")} />
           <TextField id="pf-last" label="Last name" autoComplete="family-name" error={errors.last_name?.message} {...register("last_name")} />
           <TextField

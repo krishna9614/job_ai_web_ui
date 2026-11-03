@@ -7,20 +7,19 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { Checkbox } from "@/components/forms/checkbox";
-import { TextField } from "@/components/forms/field";
+import { RequiredMark, TextField } from "@/components/forms/field";
 import { PasswordField } from "@/components/forms/password-input";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { useSignup } from "@/hooks/use-auth";
 import { ApiError } from "@/lib/api/errors";
 import { signupSchema, type SignupValues } from "@/lib/validation/auth";
-import { useOnboardingStore } from "@/stores/onboarding-store";
+import { PasswordRules } from "./password-rules";
 import { SocialButtons, socialUnavailableMessage } from "./social-buttons";
 
 export function SignupForm() {
   const router = useRouter();
   const signup = useSignup();
-  const updateDraft = useOnboardingStore((s) => s.update);
   const [info, setInfo] = useState<string | null>(null);
 
   const {
@@ -36,16 +35,15 @@ export function SignupForm() {
   });
   const terms = useWatch({ control, name: "terms" });
   const email = useWatch({ control, name: "email" });
+  const password = useWatch({ control, name: "password" });
   const emailOk = dirtyFields.email && !errors.email && signupSchema.shape.email.safeParse(email).success;
 
   const onSubmit = handleSubmit(({ fullName, email, password }) => {
     setInfo(null);
     signup.mutate(
-      { email, password },
+      { full_name: fullName, email, password },
       {
         onSuccess: (result) => {
-          // The signup API only takes credentials; the name pre-fills profile setup.
-          updateDraft({ fullNameHint: fullName });
           router.replace(result.email_confirmation_required ? "/verify-email" : "/onboarding/basic");
         },
       },
@@ -85,7 +83,8 @@ export function SignupForm() {
           icon={User}
           autoComplete="name"
           placeholder="Jessica Morgan"
-          error={errors.fullName?.message}
+          required
+          error={errors.fullName?.message ?? error?.fieldErrors.full_name}
           {...register("fullName")}
         />
         <TextField
@@ -95,6 +94,7 @@ export function SignupForm() {
           type="email"
           autoComplete="email"
           placeholder="you@example.com"
+          required
           state={emailOk ? "ok" : ""}
           trailing={emailOk ? <CircleCheck className="ic ic-sm state" /> : null}
           error={errors.email?.message ?? error?.fieldErrors.email}
@@ -105,15 +105,22 @@ export function SignupForm() {
           label="Password"
           autoComplete="new-password"
           placeholder="Create a password"
-          hint="At least 8 characters with a number & symbol"
+          required
+          aria-describedby="signup-password-rules"
           error={errors.password?.message ?? error?.fieldErrors.password}
           {...register("password")}
         />
+        <PasswordRules id="signup-password-rules" value={password} />
         <div style={{ margin: "20px 0 22px" }}>
           <Checkbox checked={terms} onChange={(e) => setValue("terms", e.target.checked, { shouldValidate: true })}>
             I agree to the <Link href="#">Terms of Service</Link> and <Link href="#">Privacy Policy</Link>
+            <RequiredMark />
           </Checkbox>
-          {errors.terms ? <div className="field-err">{errors.terms.message}</div> : null}
+          {errors.terms ? (
+            <div className="field-err" role="alert">
+              {errors.terms.message}
+            </div>
+          ) : null}
         </div>
         <Button type="submit" block arrow loading={signup.isPending}>
           {signup.isPending ? "Creating account…" : "Create Account"}

@@ -21,7 +21,8 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
   onUnauthorized = handler;
 }
 
-const AUTH_ENTRY_POINTS = ["/auth/login", "/auth/signup"];
+/** Public auth calls: a 401 here is a form error, not an expired app session. */
+const AUTH_ENTRY_POINTS = ["/auth/login", "/auth/signup", "/auth/recovery", "/auth/reset-password"];
 
 apiClient.interceptors.response.use(
   (response) => response,

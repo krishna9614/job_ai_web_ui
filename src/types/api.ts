@@ -20,6 +20,16 @@ export interface Credentials {
   password: string;
 }
 
+/** POST /auth/signup: the full name seeds the profile's first/middle/last name. */
+export interface SignupInput extends Credentials {
+  full_name: string;
+}
+
+/** Generic `{"detail": "..."}` acknowledgement (forgot password, resend, email change). */
+export interface MessageResult {
+  detail: string;
+}
+
 export interface Profile {
   user_id: string;
   first_name: string;
