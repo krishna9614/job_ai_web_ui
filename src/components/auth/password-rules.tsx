@@ -25,7 +25,7 @@ export function MissingPasswordRules({ id, value }: { id?: string; value: string
     <div id={id} aria-live="polite">
       {missing.length ? (
         <div className="field-err pw-missing">
-          <span>Missing:</span>
+          {/* <span>Missing:</span> */}
           <ul>
             {missing.map((rule) => (
               <li key={rule.label}>{rule.label}</li>

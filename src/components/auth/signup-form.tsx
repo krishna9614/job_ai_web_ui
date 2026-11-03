@@ -117,7 +117,7 @@ export function SignupForm() {
         <div style={{ margin: "20px 0 22px" }}>
           <Checkbox checked={terms} onChange={(e) => setValue("terms", e.target.checked, { shouldValidate: true })}>
             I agree to the <Link href="#">Terms of Service</Link> and <Link href="#">Privacy Policy</Link>
-            <RequiredMark />
+            {/* <RequiredMark /> */}
           </Checkbox>
           {errors.terms ? (
             <div className="field-err" role="alert">
