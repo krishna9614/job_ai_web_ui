@@ -7,7 +7,6 @@ import {
   readJson,
   setRecoveryCookie,
   unreachableResponse,
-  type BackendSession,
 } from "@/lib/server/backend";
 
 /** Whether a reset link was already exchanged in this browser (survives a page reload). */
@@ -15,7 +14,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ active: Boolean(request.cookies.get(RECOVERY_TOKEN_COOKIE)?.value) });
 }
 
-/** Consumes the one-time token_hash from the reset email; the session stays in an HttpOnly cookie. */
+/** Consumes the one-time token_hash from the reset email; the backend's sealed ticket stays in an HttpOnly cookie. */
 export async function POST(request: Request) {
   const body = await readBody(request);
   if (!body || typeof body.token_hash !== "string") {
@@ -26,8 +25,8 @@ export async function POST(request: Request) {
   const data = await readJson(response);
   if (!response.ok) return NextResponse.json(data, { status: response.status });
 
-  const session = (data as { session: BackendSession }).session;
+  const { recovery_token, expires_in } = data as { recovery_token: string; expires_in: number };
   const result = NextResponse.json({ active: true });
-  setRecoveryCookie(result, session.access_token);
+  setRecoveryCookie(result, recovery_token, expires_in);
   return result;
 }

@@ -13,7 +13,7 @@ import { useResetPassword } from "@/hooks/use-auth";
 import { ApiError, toApiError } from "@/lib/api/errors";
 import { passwordStrength, resetSchema, type ResetValues } from "@/lib/validation/auth";
 import { authService } from "@/services/auth.service";
-import { PasswordRules } from "./password-rules";
+import { MissingPasswordRules } from "./password-rules";
 
 type Phase = "checking" | "ready" | "invalid" | "done";
 
@@ -66,6 +66,8 @@ export function ResetPasswordForm() {
   const confirm = useWatch({ control, name: "confirm" });
   const strength = passwordStrength(password);
   const matches = confirm.length > 0 && confirm === password;
+  // Unmet rules are listed by MissingPasswordRules, so the field shows no duplicate message.
+  const passwordRulesFailed = errors.password?.type === "custom";
 
   const onSubmit = handleSubmit(({ password: value }) => {
     reset.mutate(value, {
@@ -164,10 +166,13 @@ export function ResetPasswordForm() {
           autoComplete="new-password"
           placeholder="Create a new password"
           required
-          error={errors.password?.message}
+          aria-describedby="reset-password-rules"
+          invalid={passwordRulesFailed}
+          error={passwordRulesFailed ? undefined : errors.password?.message}
           {...clipboardProps}
           {...register("password")}
         />
+        <MissingPasswordRules id="reset-password-rules" value={password} />
         <div className="strength">
           <div className="strength-bars">
             {[1, 2, 3, 4].map((n) => (
@@ -178,7 +183,6 @@ export function ResetPasswordForm() {
             <span>Password strength</span>
             <b>{password ? strength.label : "—"}</b>
           </div>
-          <PasswordRules value={password} />
         </div>
         <PasswordField
           id="reset-confirm"
