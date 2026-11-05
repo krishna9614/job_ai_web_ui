@@ -78,8 +78,9 @@ export function clearSessionCookies(response: CookieJar) {
   response.cookies.delete(REMEMBER_COOKIE);
 }
 
-export function setRecoveryCookie(response: CookieJar, token: string) {
-  response.cookies.set(RECOVERY_TOKEN_COOKIE, token, { ...cookieOptions(RECOVERY_MAX_AGE), path: "/api/auth" });
+export function setRecoveryCookie(response: CookieJar, token: string, maxAge = RECOVERY_MAX_AGE) {
+  const options = cookieOptions(Math.min(maxAge, RECOVERY_MAX_AGE));
+  response.cookies.set(RECOVERY_TOKEN_COOKIE, token, { ...options, path: "/api/auth" });
 }
 
 export function clearRecoveryCookie(response: CookieJar) {
