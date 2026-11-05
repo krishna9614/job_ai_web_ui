@@ -134,10 +134,12 @@ export function ResetPasswordForm() {
             Request a new link
           </Link>
         )}
-        <Link className="back-link" href="/login">
-          <ArrowLeft className="ic ic-sm" />
-          Back to Login
-        </Link>
+        {done ? null : (
+          <Link className="back-link" href="/login">
+            <ArrowLeft className="ic ic-sm" />
+            Back to Login
+          </Link>
+        )}
       </div>
     );
   }
