@@ -20,12 +20,17 @@ type Phase = "checking" | "ready" | "invalid" | "done";
 const INVALID_LINK = "This reset link is invalid, has expired or has already been used.";
 
 /**
- * Frame 06. Opened from the reset email (?token_hash=...): the one-time token is exchanged for
- * a recovery session kept in an HttpOnly cookie, then POST /auth/password/reset sets the password.
+ * Frame 06. Opened from the reset email: ?token_hash=... (custom template) or ?code=... (Supabase's
+ * default template, PKCE). The one-time link is exchanged for a recovery session kept in an
+ * HttpOnly cookie, then POST /auth/password/reset sets the password.
  */
 export function ResetPasswordForm() {
   const router = useRouter();
-  const tokenHash = useSearchParams().get("token_hash");
+  const params = useSearchParams();
+  const tokenHash = params.get("token_hash");
+  const code = params.get("code");
+  // Supabase reports a used or expired default-template link as ?error=...&error_code=otp_expired.
+  const linkFailed = Boolean(params.get("error_code") || params.get("error"));
   const reset = useResetPassword();
   const [phase, setPhase] = useState<Phase>("checking");
   const [linkError, setLinkError] = useState(INVALID_LINK);
@@ -35,12 +40,11 @@ export function ResetPasswordForm() {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    const check = tokenHash
-      ? authService.startRecovery(tokenHash).then(() => {
-          // Drop the consumed token from the address bar; a reload reuses the cookie instead.
-          router.replace("/reset-password");
-          return true;
-        })
+    const link = tokenHash ? { token_hash: tokenHash } : code ? { code } : null;
+    const check = linkFailed
+      ? Promise.resolve(false)
+      : link
+      ? authService.startRecovery(link).then(() => true)
       : authService.recoveryStatus();
     check
       .then((active) => setPhase(active ? "ready" : "invalid"))
@@ -48,8 +52,12 @@ export function ResetPasswordForm() {
         const apiError = toApiError(err);
         setLinkError(apiError.code === "invalid_token" ? INVALID_LINK : apiError.message);
         setPhase("invalid");
+      })
+      // Drop the consumed link from the address bar; a reload reuses the cookie instead.
+      .finally(() => {
+        if (tokenHash || code || linkFailed) router.replace("/reset-password");
       });
-  }, [tokenHash, router]);
+  }, [tokenHash, code, linkFailed, router]);
 
   const {
     register,

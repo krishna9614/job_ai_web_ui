@@ -28,9 +28,9 @@ export const authService = {
     return data;
   },
 
-  /** Exchanges the reset link's token_hash for a recovery session (HttpOnly cookie). */
-  async startRecovery(tokenHash: string): Promise<void> {
-    await apiClient.post("/auth/recovery", { token_hash: tokenHash });
+  /** Exchanges the reset link's token_hash or PKCE code for a recovery session (HttpOnly cookie). */
+  async startRecovery(link: { token_hash: string } | { code: string }): Promise<void> {
+    await apiClient.post("/auth/recovery", link);
   },
 
   async recoveryStatus(): Promise<boolean> {
