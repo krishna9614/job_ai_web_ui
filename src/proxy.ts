@@ -9,7 +9,11 @@ const GUEST_ONLY = ["/login", "/signup"];
  * the token on every request; an invalid cookie is cleared by the API proxy on its first 401.
  */
 export function proxy(request: NextRequest) {
-  const { pathname, search } = request.nextUrl;
+  const { pathname, search, searchParams } = request.nextUrl;
+  // Supabase falls back to the Site URL when the reset email's redirect isn't allow-listed.
+  if (pathname === "/" && (searchParams.has("code") || searchParams.has("error_code"))) {
+    return NextResponse.redirect(new URL(`/reset-password${search}`, request.url));
+  }
   const hasSession = SESSION_COOKIES.some((name) => Boolean(request.cookies.get(name)?.value));
 
   if (!hasSession && PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
@@ -24,5 +28,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/onboarding/:path*", "/login", "/signup"],
+  matcher: ["/", "/dashboard/:path*", "/onboarding/:path*", "/login", "/signup"],
 };

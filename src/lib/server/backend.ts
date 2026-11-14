@@ -47,8 +47,13 @@ export const REMEMBER_COOKIE = "jobai_remember";
 /** Short-lived session from an emailed reset link; only usable for /auth/password/reset. */
 export const RECOVERY_TOKEN_COOKIE = "jobai_recovery_token";
 
+/** Sealed PKCE verifier from POST /auth/password/forgot, needed when the email link returns ?code=. */
+export const RECOVERY_STATE_COOKIE = "jobai_recovery_state";
+
 export const REMEMBER_ME_MAX_AGE = 60 * 60 * 24 * 30;
 const RECOVERY_MAX_AGE = 60 * 15;
+// Matches the backend's RECOVERY_STATE_TTL_SECONDS (hosted Supabase reset links last 1 hour).
+const RECOVERY_STATE_MAX_AGE = 60 * 60;
 
 export interface BackendSession {
   access_token: string;
@@ -81,6 +86,14 @@ export function clearSessionCookies(response: CookieJar) {
 export function setRecoveryCookie(response: CookieJar, token: string, maxAge = RECOVERY_MAX_AGE) {
   const options = cookieOptions(Math.min(maxAge, RECOVERY_MAX_AGE));
   response.cookies.set(RECOVERY_TOKEN_COOKIE, token, { ...options, path: "/api/auth" });
+}
+
+export function setRecoveryStateCookie(response: CookieJar, state: string) {
+  response.cookies.set(RECOVERY_STATE_COOKIE, state, { ...cookieOptions(RECOVERY_STATE_MAX_AGE), path: "/api/auth" });
+}
+
+export function clearRecoveryStateCookie(response: CookieJar) {
+  response.cookies.set(RECOVERY_STATE_COOKIE, "", { ...cookieOptions(), path: "/api/auth", maxAge: 0 });
 }
 
 export function clearRecoveryCookie(response: CookieJar) {
