@@ -60,7 +60,7 @@ export function ForgotPasswordForm() {
       </Link>
       <div className="side-note" style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid #EEF2EE" }}>
         <Clock className="ic ic-sm" />
-        Reset links expire after 30 minutes and can be used once
+        Reset links last 5 minutes, work once, and must be opened in this browser
       </div>
     </div>
   );
