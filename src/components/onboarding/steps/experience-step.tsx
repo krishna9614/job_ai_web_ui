@@ -27,6 +27,8 @@ interface Role {
   current: boolean;
   location: string;
   responsibilities: string;
+  /** The saved row, so fields this form doesn't edit (or shows at month precision) survive a save. */
+  saved?: Experience;
 }
 
 let nextKey = 0;
@@ -54,8 +56,12 @@ function fromApi(e: Experience): Role {
     current: e.is_current,
     location: [e.location_city, e.location_state, countryName(e.location_country)].filter(Boolean).join(", "),
     responsibilities: e.description ?? "",
+    saved: e,
   };
 }
+
+const keepDate = (saved: string | null | undefined, month: string) =>
+  saved && toMonth(saved) === month ? saved : fromMonth(month);
 
 function toApi(r: Role): ListInput<Experience> {
   const loc = parseLocation(r.location);
@@ -64,12 +70,12 @@ function toApi(r: Role): ListInput<Experience> {
     company_name: r.company.trim(),
     job_title: r.title.trim(),
     employment_type: codeFor(EMPLOYMENT_TYPE_LABELS, r.employmentType),
-    work_arrangement: null,
+    work_arrangement: r.saved?.work_arrangement ?? null,
     location_city: loc.city || null,
     location_state: loc.state_province || null,
     location_country: loc.country_code || null,
-    start_date: fromMonth(r.start) ?? "",
-    end_date: r.current ? null : fromMonth(r.end),
+    start_date: keepDate(r.saved?.start_date, r.start) ?? "",
+    end_date: r.current ? null : keepDate(r.saved?.end_date, r.end),
     is_current: r.current,
     description: r.responsibilities.trim() || null,
   };
