@@ -95,21 +95,3 @@ export function toUpdatePayload(values: ProfileFormValues, current: Profile): Pr
   }
   return patch as ProfileUpdate;
 }
-
-/** Share of profile fields filled in, used for the design's "profile strength" ring. */
-export function profileCompleteness(profile: Profile | null | undefined): number {
-  if (!profile) return 0;
-  const weighted: FieldKey[] = [
-    "first_name",
-    "last_name",
-    "professional_headline",
-    "professional_summary",
-    "phone_number",
-    "city",
-    "country_code",
-    "linkedin_url",
-    "github_url",
-  ];
-  const filled = weighted.filter((k) => Boolean(profile[k])).length;
-  return Math.round((filled / weighted.length) * 100);
-}

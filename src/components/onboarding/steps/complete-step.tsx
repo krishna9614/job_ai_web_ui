@@ -4,6 +4,7 @@ import { ArrowRight, Check, CircleCheck, CircleHelp, Heart } from "lucide-react"
 import Link from "next/link";
 import { SUPPORT_HREF } from "@/lib/config";
 import { useProfile } from "@/hooks/use-profile";
+import { useProfileStrength } from "@/hooks/use-profile-strength";
 import { Leaves } from "@/components/layout/auth-shell";
 import { OnboardingTop, StrengthRing } from "../onboarding-shell";
 
@@ -40,6 +41,7 @@ const MATCHES = [
 export function CompleteStep() {
   const { data: profile } = useProfile();
   const name = profile?.preferred_name || profile?.first_name;
+  const strength = useProfileStrength();
 
   return (
     <main className="auth ob">
@@ -64,7 +66,7 @@ export function CompleteStep() {
             Your profile is <span className="hl">complete!</span>
           </h2>
           <p className="sub">You&apos;re all set{name ? `, ${name}` : ""}. Thousands of jobs are waiting for you.</p>
-          <StrengthRing value={100} size="lg" />
+          <StrengthRing value={strength} size="lg" />
           <div className="done-list">
             {SECTIONS.map((s) => (
               <span key={s}>

@@ -12,7 +12,7 @@ import {
   legalName,
   prettyUrl,
 } from "@/lib/profile/format";
-import { profileCompleteness } from "@/lib/profile/schema";
+import { useProfileStrength } from "@/hooks/use-profile-strength";
 import type { Profile, User } from "@/types/api";
 import { PROFILE_SECTIONS, type SectionId } from "./sections";
 import { SetupSections } from "./setup-sections";
@@ -24,7 +24,7 @@ function strengthCaption(p: number) {
 }
 
 export function ProfileSummaryCard({ profile, user }: { profile: Profile | null; user: User }) {
-  const strength = profileCompleteness(profile);
+  const strength = useProfileStrength();
   const location = profile ? formatLocation(profile) : null;
   return (
     <div className="card p-card">
