@@ -33,6 +33,7 @@ export function OnboardingShell({
   children,
   footer,
   onSaveExit,
+  onLeave,
   loading,
 }: {
   stepIndex: number;
@@ -42,6 +43,8 @@ export function OnboardingShell({
   footer: ReactNode;
   /** Saves the step and records it as the resume point before leaving for the dashboard. */
   onSaveExit?: () => void;
+  /** Saves the step before following a stepper link to an earlier step. */
+  onLeave?: (href: string) => void;
   /** Disables the form until saved data has loaded, so early edits can't drop it. */
   loading?: boolean;
 }) {
@@ -82,7 +85,18 @@ export function OnboardingShell({
                 <Fragment key={step.slug}>
                   {i > 0 ? <span className={`ob-line ${i <= stepIndex ? "done" : ""}`}></span> : null}
                   {i < stepIndex ? (
-                    <Link className={`ob-step ${state}`} href={stepHref(i)}>
+                    <Link
+                      className={`ob-step ${state}`}
+                      href={stepHref(i)}
+                      onClick={
+                        onLeave
+                          ? (e) => {
+                              e.preventDefault();
+                              onLeave(stepHref(i));
+                            }
+                          : undefined
+                      }
+                    >
                       {node}
                     </Link>
                   ) : (
@@ -124,8 +138,11 @@ export function OnboardingFooter({
   loading,
   skip,
   onSkip,
+  onBack,
 }: {
   stepIndex: number;
+  /** Back handler that saves first; falls back to a plain link to the previous step. */
+  onBack?: () => void;
   onContinue?: () => void;
   continueLabel?: string;
   loading?: boolean;
@@ -135,7 +152,12 @@ export function OnboardingFooter({
 }) {
   return (
     <div className="ob-foot">
-      {stepIndex > 0 ? (
+      {stepIndex > 0 && onBack ? (
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onBack} disabled={loading}>
+          <ArrowLeft className="ic ic-sm" />
+          Back
+        </button>
+      ) : stepIndex > 0 ? (
         <Link className="btn btn-ghost btn-sm" href={stepHref(stepIndex - 1)}>
           <ArrowLeft className="ic ic-sm" />
           Back

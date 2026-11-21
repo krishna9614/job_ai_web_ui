@@ -103,7 +103,8 @@ export function ResumeStep() {
       }
       description="Upload your resume and share your work. We'll fill in anything we find."
       onSaveExit={() => void nav.exit(persist)}
-      footer={<OnboardingFooter stepIndex={4} skip onSkip={nav.skip} onContinue={() => void nav.next(persist)} loading={nav.busy} />}
+      onLeave={(href) => void nav.go(persist, href)}
+      footer={<OnboardingFooter stepIndex={4} onBack={() => void nav.back(persist)} skip onSkip={nav.skip} onContinue={() => void nav.next(persist)} loading={nav.busy} />}
     >
       {apiError ? <Notice tone="err">{apiError.message}</Notice> : null}
       {!profile.isPending && !profile.data ? (

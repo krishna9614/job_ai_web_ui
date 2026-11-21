@@ -61,10 +61,12 @@ export function SkillsStep() {
       }
       description="Add your skills to improve match accuracy. Press Enter to add each one."
       onSaveExit={() => void nav.exit(persist)}
+      onLeave={(href) => void nav.go(persist, href)}
       loading={saved.isPending}
       footer={
         <OnboardingFooter
           stepIndex={3}
+          onBack={() => void nav.back(persist)}
           skip
           onSkip={nav.skip}
           onContinue={() => void nav.next(persist)}

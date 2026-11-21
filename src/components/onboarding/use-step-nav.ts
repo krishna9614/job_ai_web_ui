@@ -31,8 +31,20 @@ export function useStepNav(stepIndex: number) {
     }
   };
 
+  /** Saves edits before going back to an earlier step; progress isn't changed. */
+  const go = async (persist: () => Promise<boolean>, href: string) => {
+    setBusy(true);
+    try {
+      if (await persist()) router.push(href);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return {
     busy,
+    go,
+    back: (persist: () => Promise<boolean>) => go(persist, stepHref(stepIndex - 1)),
     next: (persist: () => Promise<boolean>) => run(persist, "next"),
     skip: () => run(null, "next"),
     exit: (persist: () => Promise<boolean>) => run(persist, "exit"),

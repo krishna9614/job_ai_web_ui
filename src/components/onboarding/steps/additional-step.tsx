@@ -292,10 +292,12 @@ export function AdditionalStep() {
       }
       description="A few more details to round out your profile."
       onSaveExit={() => void nav.exit(persist)}
+      onLeave={(href) => void nav.go(persist, href)}
       loading={loading}
       footer={
         <OnboardingFooter
           stepIndex={5}
+          onBack={() => void nav.back(persist)}
           skip
           onSkip={nav.skip}
           continueLabel="Finish Setup"
