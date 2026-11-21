@@ -52,6 +52,8 @@ interface Edu {
   degree: string;
   school: string;
   years: string;
+  /** The saved row, so years the text box can't express (end only, undated "currently studying") survive a save. */
+  saved?: Education;
 }
 
 const keyed = <T extends { id: string }>(rows: T[] | undefined): Keyed<T>[] => (rows ?? []).map((r) => ({ ...r, key: r.id }));
@@ -68,6 +70,7 @@ const eduFromApi = (e: Education): Edu => ({
   degree: e.degree_name,
   school: e.institution_name,
   years: formatYears(e.start_year, e.end_year, e.is_currently_studying),
+  saved: e,
 });
 
 const blankCert = (): Cert => ({
@@ -232,7 +235,11 @@ export function AdditionalStep() {
       tasks.push(
         replaceEdu.mutateAsync(
           eduEdited.map((e) => {
-            const years = parseYears(e.years) ?? { start: null, end: null, current: false };
+            const s = e.saved;
+            const years =
+              s && e.years === formatYears(s.start_year, s.end_year, s.is_currently_studying)
+                ? { start: s.start_year, end: s.end_year, current: s.is_currently_studying }
+                : (parseYears(e.years) ?? { start: null, end: null, current: false });
             return {
               id: e.id,
               education_level: codeFor(EDUCATION_LEVEL_LABELS, e.level) ?? "other",
