@@ -79,16 +79,21 @@ export function PreferencesStep() {
     }
     setSalaryError(null);
     const hasSalary = salary.min !== null;
+    // Saved salary terms (e.g. hourly, or a maximum only) are left alone unless the user changes them.
+    const original = toForm(prefs.data);
+    const salaryChanged = form.salary !== original.salary || (hasSalary && form.currency !== original.currency);
     try {
       await save.mutateAsync({
         employment_status: form.employmentStatus,
         preferred_job_titles: form.roles,
         preferred_locations: form.locations,
         preferred_work_types: form.workTypes,
-        minimum_salary: salary.min,
-        maximum_salary: salary.max,
-        salary_currency: hasSalary ? form.currency : null,
-        salary_period: hasSalary ? "yearly" : null,
+        ...(salaryChanged && {
+          minimum_salary: salary.min,
+          maximum_salary: salary.max,
+          salary_currency: hasSalary ? form.currency : null,
+          salary_period: hasSalary ? "yearly" : null,
+        }),
         notice_period_days: NOTICE_PERIODS.find((n) => n.label === form.notice)?.days ?? null,
       });
       setEdited(null);
