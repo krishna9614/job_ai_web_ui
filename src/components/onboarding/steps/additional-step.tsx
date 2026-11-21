@@ -292,6 +292,7 @@ export function AdditionalStep() {
       }
       description="A few more details to round out your profile."
       onSaveExit={() => void nav.exit(persist)}
+      loading={loading}
       footer={
         <OnboardingFooter
           stepIndex={5}

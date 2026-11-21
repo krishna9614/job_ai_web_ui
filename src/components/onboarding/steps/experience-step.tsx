@@ -145,6 +145,7 @@ export function ExperienceStep() {
       }
       description="Add your roles. JobAI uses them to tailor every resume you send."
       onSaveExit={() => void nav.exit(persist)}
+      loading={saved.isPending || prefs.isPending}
       footer={
         <OnboardingFooter
           stepIndex={2}

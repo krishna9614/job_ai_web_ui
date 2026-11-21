@@ -110,6 +110,7 @@ export function PreferencesStep() {
       }
       description="Tell us what you're looking for. We'll only match you with roles that fit."
       onSaveExit={() => void nav.exit(persist)}
+      loading={prefs.isPending}
       footer={<OnboardingFooter stepIndex={1} onContinue={() => void nav.next(persist)} loading={nav.busy || prefs.isPending} />}
     >
       {apiError ? <Notice tone="err">{apiError.message}</Notice> : null}

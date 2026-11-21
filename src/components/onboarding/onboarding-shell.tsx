@@ -33,6 +33,7 @@ export function OnboardingShell({
   children,
   footer,
   onSaveExit,
+  loading,
 }: {
   stepIndex: number;
   title: ReactNode;
@@ -41,6 +42,8 @@ export function OnboardingShell({
   footer: ReactNode;
   /** Saves the step and records it as the resume point before leaving for the dashboard. */
   onSaveExit?: () => void;
+  /** Disables the form until saved data has loaded, so early edits can't drop it. */
+  loading?: boolean;
 }) {
   const strength = ONBOARDING_STEPS[stepIndex].strength;
   return (
@@ -104,7 +107,9 @@ export function OnboardingShell({
               </div>
             </div>
           </div>
-          {children}
+          <fieldset className="ob-fields" disabled={loading} aria-busy={loading}>
+            {children}
+          </fieldset>
           {footer}
         </div>
       </div>
