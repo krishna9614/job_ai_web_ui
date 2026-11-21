@@ -177,10 +177,10 @@ export function ExperienceStep() {
         </div>
       ) : null}
 
-      {roles.length ? (
+      {roles.length || hasInput ? (
         <div className="level-row">
           <span className="ob-label" style={{ margin: 0 }}>
-            Your roles
+            {roles.length ? "Your roles" : null}
           </span>
           <button
             type="button"
