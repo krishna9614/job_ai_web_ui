@@ -32,12 +32,15 @@ export function OnboardingShell({
   description,
   children,
   footer,
+  onSaveExit,
 }: {
   stepIndex: number;
   title: ReactNode;
   description: string;
   children: ReactNode;
   footer: ReactNode;
+  /** Saves the step and records it as the resume point before leaving for the dashboard. */
+  onSaveExit?: () => void;
 }) {
   const strength = ONBOARDING_STEPS[stepIndex].strength;
   return (
@@ -48,7 +51,13 @@ export function OnboardingShell({
           <>
             Step {stepIndex + 1} of {ONBOARDING_STEPS.length}
             <span className="sep"></span>
-            <Link href="/dashboard">Save &amp; exit</Link>
+            {onSaveExit ? (
+              <button type="button" className="link-btn" onClick={onSaveExit}>
+                Save &amp; exit
+              </button>
+            ) : (
+              <Link href="/dashboard">Save &amp; exit</Link>
+            )}
           </>
         }
       />
@@ -109,12 +118,15 @@ export function OnboardingFooter({
   continueLabel = "Continue",
   loading,
   skip,
+  onSkip,
 }: {
   stepIndex: number;
   onContinue?: () => void;
   continueLabel?: string;
   loading?: boolean;
   skip?: boolean;
+  /** Skip handler (records progress); falls back to a plain link to the next step. */
+  onSkip?: () => void;
 }) {
   return (
     <div className="ob-foot">
@@ -126,7 +138,11 @@ export function OnboardingFooter({
       ) : (
         <span></span>
       )}
-      {skip ? (
+      {skip && onSkip ? (
+        <button type="button" className="skip link-btn" onClick={onSkip} disabled={loading}>
+          Skip for now
+        </button>
+      ) : skip ? (
         <Link className="skip" href={stepHref(stepIndex + 1)}>
           Skip for now
         </Link>

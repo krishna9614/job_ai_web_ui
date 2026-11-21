@@ -552,6 +552,7 @@ button { font-family: inherit; }
 .social-btn, .tag-add, .opt, .opt-card, .exp-act, .switch, .link-btn { font-family: inherit; }
 .opt-card { text-align: left; }
 .link-btn { background: none; border: 0; padding: 0; color: var(--primary); font-weight: 700; font-size: inherit; }
+.link-btn.skip { font-size: 13.5px; color: var(--faint); }
 
 /* Inputs: the design's .input box hosts a real form control */
 .input input, .input select, .input textarea {

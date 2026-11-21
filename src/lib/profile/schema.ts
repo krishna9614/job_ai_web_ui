@@ -20,6 +20,9 @@ const url = (label: string) =>
       }
     }, `Enter a full URL starting with https://`);
 
+/** Any optional http(s) link, e.g. portfolio or credential URLs. */
+export const linkSchema = url("Link");
+
 export const profileFormSchema = z.object({
   first_name: z.string().trim().min(1, "First name is required").max(100, "First name must be at most 100 characters"),
   middle_name: optional(100, "Middle name"),
