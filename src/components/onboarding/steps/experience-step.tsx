@@ -65,6 +65,8 @@ const keepDate = (saved: string | null | undefined, month: string) =>
 
 function toApi(r: Role): ListInput<Experience> {
   const loc = parseLocation(r.location);
+  const start = keepDate(r.saved?.start_date, r.start) ?? "";
+  const end = r.current ? null : keepDate(r.saved?.end_date, r.end);
   return {
     id: r.id,
     company_name: r.company.trim(),
@@ -74,8 +76,9 @@ function toApi(r: Role): ListInput<Experience> {
     location_city: loc.city || null,
     location_state: loc.state_province || null,
     location_country: loc.country_code || null,
-    start_date: keepDate(r.saved?.start_date, r.start) ?? "",
-    end_date: r.current ? null : keepDate(r.saved?.end_date, r.end),
+    start_date: start,
+    // A kept exact start (May 25) can fall after a new same-month end (May 1).
+    end_date: end && end < start ? start : end,
     is_current: r.current,
     description: r.responsibilities.trim() || null,
   };
