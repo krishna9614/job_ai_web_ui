@@ -498,6 +498,7 @@ h1, h2, h3, h4 { font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
 .switch.on { background: var(--primary); }
 .switch.on::after { left: 21px; }
 
+.ob-fields { display: contents; border: 0; margin: 0; padding: 0; min-width: 0; }
 .ob-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 18px; border-top: 1px solid #EEF2EE; }
 .ob-foot .btn-ghost { gap: 8px; }
 .skip { font-size: 13.5px; font-weight: 700; color: var(--faint); }
@@ -552,6 +553,7 @@ button { font-family: inherit; }
 .social-btn, .tag-add, .opt, .opt-card, .exp-act, .switch, .link-btn { font-family: inherit; }
 .opt-card { text-align: left; }
 .link-btn { background: none; border: 0; padding: 0; color: var(--primary); font-weight: 700; font-size: inherit; }
+.link-btn.skip { font-size: 13.5px; color: var(--faint); }
 
 /* Inputs: the design's .input box hosts a real form control */
 .input input, .input select, .input textarea {

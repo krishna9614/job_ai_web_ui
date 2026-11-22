@@ -21,7 +21,7 @@ export function DashboardHeader({ user, profile }: { user?: User; profile?: Prof
           <Link className="active" href="/dashboard" aria-current="page">
             My Profile
           </Link>
-          <Link href="/onboarding/basic">Profile Setup</Link>
+          <Link href="/onboarding">Profile Setup</Link>
         </div>
         <div className="nav-cta">
           {user ? (

@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Briefcase, Camera, CircleCheck, Clock, Lock, Mail, MapPin, Sparkles, Upload, User } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -14,6 +13,7 @@ import { ApiError } from "@/lib/api/errors";
 import { DIAL_CODES } from "@/lib/profile/countries";
 import { formatLocation, initials } from "@/lib/profile/format";
 import { parseLocation, splitFullName } from "@/lib/profile/location";
+import { EXPERIENCE_RANGES, experienceLabel } from "@/lib/profile/setup-options";
 import {
   profileFormSchema,
   profileToForm,
@@ -23,9 +23,9 @@ import {
 } from "@/lib/profile/schema";
 import { useOnboardingStore } from "@/stores/onboarding-store";
 import { OnboardingFooter, OnboardingShell } from "../onboarding-shell";
-import { stepHref } from "../steps";
+import { useStepNav } from "../use-step-nav";
 
-const EXPERIENCE = ["Less than 1 year", "1–2 years", "3–5 years", "6–8 years", "9–12 years", "13+ years"] as const;
+const EXPERIENCE = EXPERIENCE_RANGES.map((r) => r.label);
 
 const basicSchema = z.object({
   fullName: z.string().trim().min(1, "Full name is required").max(300, "Name is too long"),
@@ -39,12 +39,12 @@ type BasicValues = z.infer<typeof basicSchema>;
 
 /** Step 1 — persisted to the profile API (POST when new, PATCH when it already exists). */
 export function BasicStep() {
-  const router = useRouter();
+  const nav = useStepNav(0);
   const user = useCurrentUser();
   const profile = useProfile();
   const create = useCreateProfile();
   const update = useUpdateProfile();
-  const { draft, update: updateDraft } = useOnboardingStore();
+  const { draft } = useOnboardingStore();
   const [photo, setPhoto] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -67,14 +67,13 @@ export function BasicStep() {
       dial: p?.phone_country_code ?? "+1",
       phone: p?.phone_number ?? "",
       location: p ? (formatLocation(p) ?? "") : "",
-      totalExperience: draft.totalExperience,
+      totalExperience: experienceLabel(p?.total_experience_years),
     });
-  }, [profile.isPending, profile.data, draft.fullNameHint, draft.totalExperience, isDirty, reset]);
+  }, [profile.isPending, profile.data, draft.fullNameHint, isDirty, reset]);
 
   useEffect(() => () => void (photo && URL.revokeObjectURL(photo)), [photo]);
 
-  const onSubmit = handleSubmit((values) => {
-    updateDraft({ totalExperience: values.totalExperience });
+  const persist = async (values: BasicValues): Promise<boolean> => {
     const loc = parseLocation(values.location);
     const current = profile.data;
     const next: ProfileFormValues = {
@@ -87,21 +86,29 @@ export function BasicStep() {
       state_province: loc.state_province,
       country_code: loc.country_code,
     };
-    const go = () => router.push(stepHref(1));
-    if (current) {
-      const patch = toUpdatePayload(next, current);
-      if (Object.keys(patch).length === 0) return go();
-      update.mutate(patch, { onSuccess: go });
-    } else {
-      create.mutate(toCreatePayload(next), { onSuccess: go });
+    const years = EXPERIENCE_RANGES.find((r) => r.label === values.totalExperience)?.years ?? null;
+    try {
+      if (current) {
+        const patch = toUpdatePayload(next, current);
+        if (years !== current.total_experience_years) patch.total_experience_years = years;
+        if (Object.keys(patch).length) await update.mutateAsync(patch);
+      } else {
+        await create.mutateAsync({ ...toCreatePayload(next), total_experience_years: years });
+      }
+      return true;
+    } catch {
+      return false;
     }
-  });
+  };
+
+  const validated = () =>
+    new Promise<boolean>((resolve) => void handleSubmit(async (v) => resolve(await persist(v)), () => resolve(false))());
 
   const mutationError = (create.error ?? update.error) as ApiError | null;
   const loadError = profile.error instanceof ApiError ? profile.error : null;
 
   return (
-    <form onSubmit={onSubmit} noValidate>
+    <form onSubmit={(e) => (e.preventDefault(), void nav.next(validated))} noValidate>
       <OnboardingShell
         stepIndex={0}
         title={
@@ -110,7 +117,8 @@ export function BasicStep() {
           </>
         }
         description="This helps us find the best job opportunities for you."
-        footer={<OnboardingFooter stepIndex={0} loading={create.isPending || update.isPending} />}
+        onSaveExit={() => void nav.exit(validated)}
+        footer={<OnboardingFooter stepIndex={0} loading={nav.busy} />}
       >
         {loadError ? <Notice tone="err">{loadError.message}</Notice> : null}
         {mutationError ? <Notice tone="err">{mutationError.message}</Notice> : null}

@@ -12,9 +12,10 @@ import {
   legalName,
   prettyUrl,
 } from "@/lib/profile/format";
-import { profileCompleteness } from "@/lib/profile/schema";
+import { useProfileStrength } from "@/hooks/use-profile-strength";
 import type { Profile, User } from "@/types/api";
 import { PROFILE_SECTIONS, type SectionId } from "./sections";
+import { SetupSections } from "./setup-sections";
 
 function strengthCaption(p: number) {
   if (p < 40) return "Add more details to stand out";
@@ -23,7 +24,7 @@ function strengthCaption(p: number) {
 }
 
 export function ProfileSummaryCard({ profile, user }: { profile: Profile | null; user: User }) {
-  const strength = profileCompleteness(profile);
+  const strength = useProfileStrength();
   const location = profile ? formatLocation(profile) : null;
   return (
     <div className="card p-card">
@@ -190,8 +191,10 @@ export function ProfileSections({ profile, onEdit }: { profile: Profile; onEdit:
         <dl className="info-grid">
           <Info label="LinkedIn" value={externalLink(profile.linkedin_url)} />
           <Info label="GitHub" value={externalLink(profile.github_url)} />
+          <Info label="Portfolio" value={externalLink(profile.portfolio_url)} />
         </dl>
       </SectionCard>
+      <SetupSections profile={profile} />
       <p style={{ fontSize: 12.5, color: "var(--faint)", textAlign: "right" }}>
         Profile created {formatDate(profile.created_at)} · Last updated {formatDate(profile.updated_at, true)}
       </p>

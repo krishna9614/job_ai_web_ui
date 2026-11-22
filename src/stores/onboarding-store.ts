@@ -1,79 +1,16 @@
 import { create } from "zustand";
 
 /**
- * Client-only answers for the onboarding steps that have no backend contract yet
- * (preferences, experience, skills, resume file, additional info). Kept in memory so values
- * survive moving between steps; nothing here is sent to the API.
+ * Client-only onboarding state. Every step's answers are loaded from and saved to the API; this
+ * only keeps what has no backend yet: the name typed at sign-up (pre-fills Basic Info before the
+ * profile exists) and the picked resume file (file storage isn't connected).
  */
-export interface Experience {
-  id: string;
-  company: string;
-  title: string;
-  employmentType: string;
-  start: string;
-  end: string;
-  location: string;
-  responsibilities: string;
-}
-
-export interface Education {
-  id: string;
-  degree: string;
-  school: string;
-  years: string;
-}
-
 export interface OnboardingDraft {
   fullNameHint: string;
-  totalExperience: string;
-  employmentStatus: string;
-  roles: string[];
-  locations: string[];
-  workTypes: string[];
-  salary: string;
-  noticePeriod: string;
-  experienceLevel: "fresher" | "experienced";
-  experiences: Experience[];
-  technicalSkills: string[];
-  softSkills: string[];
-  tools: string[];
   resumeFile: { name: string; size: number } | null;
-  portfolioUrl: string;
-  languages: string[];
-  certifications: string[];
-  education: Education[];
-  careerGaps: string;
-  workAuthorization: string;
-  relocate: string;
-  discoverable: boolean;
-  dailyDigest: boolean;
 }
 
-const initialDraft: OnboardingDraft = {
-  fullNameHint: "",
-  totalExperience: "",
-  employmentStatus: "",
-  roles: [],
-  locations: [],
-  workTypes: [],
-  salary: "",
-  noticePeriod: "",
-  experienceLevel: "experienced",
-  experiences: [],
-  technicalSkills: [],
-  softSkills: [],
-  tools: [],
-  resumeFile: null,
-  portfolioUrl: "",
-  languages: [],
-  certifications: [],
-  education: [],
-  careerGaps: "None",
-  workAuthorization: "",
-  relocate: "",
-  discoverable: true,
-  dailyDigest: true,
-};
+const initialDraft: OnboardingDraft = { fullNameHint: "", resumeFile: null };
 
 interface OnboardingState {
   draft: OnboardingDraft;

@@ -1,62 +1,148 @@
 "use client";
 
-import { Briefcase, Building, Calendar, CircleCheck, MapPin, Pencil, Plus, Trash } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Briefcase, Building, Calendar, CircleCheck, MapPin, Pencil, Plus, Sparkles, Trash } from "lucide-react";
 import { useState } from "react";
-import { SelectField, TextField, FieldShell, InputBox } from "@/components/forms/field";
+import { FieldShell, InputBox, SelectField, TextField } from "@/components/forms/field";
 import { Button } from "@/components/ui/button";
-import { useOnboardingStore, type Experience } from "@/stores/onboarding-store";
-import { OptionPill } from "../controls";
+import { Notice } from "@/components/ui/notice";
+import { usePreferences, useReplaceList, useSetupList } from "@/hooks/use-profile-setup";
+import { ApiError } from "@/lib/api/errors";
+import { countryName } from "@/lib/profile/countries";
+import { parseLocation } from "@/lib/profile/location";
+import { EMPLOYMENT_TYPE_LABELS, codeFor, fromMonth, monthLabel, toMonth } from "@/lib/profile/setup-options";
+import type { Experience, ListInput } from "@/types/api";
 import { OnboardingFooter, OnboardingShell } from "../onboarding-shell";
-import { stepHref } from "../steps";
+import { useStepNav } from "../use-step-nav";
 
-const TYPES = ["Full-time", "Part-time", "Contract", "Internship", "Freelance"] as const;
+const TYPES = Object.values(EMPLOYMENT_TYPE_LABELS);
 
-const blank = (): Experience => ({
-  id: "",
+interface Role {
+  key: string;
+  id?: string;
+  company: string;
+  title: string;
+  employmentType: string;
+  start: string;
+  end: string;
+  current: boolean;
+  location: string;
+  responsibilities: string;
+  /** The saved row, so fields this form doesn't edit (or shows at month precision) survive a save. */
+  saved?: Experience;
+}
+
+let nextKey = 0;
+const blank = (): Role => ({
+  key: `new-${++nextKey}`,
   company: "",
   title: "",
   employmentType: "Full-time",
   start: "",
   end: "",
+  current: false,
   location: "",
   responsibilities: "",
 });
 
-function monthLabel(value: string) {
-  if (!value) return "Present";
-  const [y, m] = value.split("-").map(Number);
-  return new Date(y, (m ?? 1) - 1).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+function fromApi(e: Experience): Role {
+  return {
+    key: e.id,
+    id: e.id,
+    company: e.company_name,
+    title: e.job_title,
+    employmentType: e.employment_type ? EMPLOYMENT_TYPE_LABELS[e.employment_type] : "",
+    start: toMonth(e.start_date),
+    end: toMonth(e.end_date),
+    current: e.is_current,
+    location: [e.location_city, e.location_state, countryName(e.location_country)].filter(Boolean).join(", "),
+    responsibilities: e.description ?? "",
+    saved: e,
+  };
 }
 
+const keepDate = (saved: string | null | undefined, month: string) =>
+  saved && toMonth(saved) === month ? saved : fromMonth(month);
+
+function toApi(r: Role): ListInput<Experience> {
+  const loc = parseLocation(r.location);
+  const start = keepDate(r.saved?.start_date, r.start) ?? "";
+  const end = r.current ? null : keepDate(r.saved?.end_date, r.end);
+  return {
+    id: r.id,
+    company_name: r.company.trim(),
+    job_title: r.title.trim(),
+    employment_type: codeFor(EMPLOYMENT_TYPE_LABELS, r.employmentType),
+    work_arrangement: r.saved?.work_arrangement ?? null,
+    location_city: loc.city || null,
+    location_state: loc.state_province || null,
+    location_country: loc.country_code || null,
+    start_date: start,
+    // A kept exact start (May 25) can fall after a new same-month end (May 1).
+    end_date: end && end < start ? start : end,
+    is_current: r.current,
+    description: r.responsibilities.trim() || null,
+  };
+}
+
+function problems(r: Role): Partial<Record<"company" | "title" | "start" | "end", string>> {
+  return {
+    company: r.company.trim() ? undefined : "Required",
+    title: r.title.trim() ? undefined : "Required",
+    start: r.start ? undefined : "Required",
+    end: !r.current && r.end && r.start && r.end < r.start ? "Must be after the start date" : undefined,
+  };
+}
+
+/**
+ * Step 3 — saved to user_experience. Experience level and employment status come from the
+ * Preferences step; Freshers may skip this step.
+ */
 export function ExperienceStep() {
-  const router = useRouter();
-  const { draft, update } = useOnboardingStore();
-  const [editing, setEditing] = useState<Experience>(() => blank());
-  const [current, setCurrent] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const nav = useStepNav(2);
+  const prefs = usePreferences();
+  const saved = useSetupList("experience");
+  const replace = useReplaceList("experience");
+  const [edited, setEdited] = useState<Role[] | null>(null);
+  const roles = edited ?? (saved.data ?? []).map(fromApi);
+  const [editing, setEditing] = useState<Role>(blank);
+  const [showErrors, setShowErrors] = useState(false);
+  const fresher = prefs.data?.employment_status === "fresher";
 
-  const set = (patch: Partial<Experience>) => setEditing((e) => ({ ...e, ...patch }));
-  const hasInput = Boolean(editing.company || editing.title);
+  const set = (patch: Partial<Role>) => setEditing((e) => ({ ...e, ...patch }));
+  const hasInput = Boolean(editing.company || editing.title || editing.start);
+  const errors = showErrors ? problems(editing) : {};
+  const isEdit = roles.some((r) => r.key === editing.key);
 
-  const save = () => {
-    if (!editing.company.trim() || !editing.title.trim()) {
-      setError("Company name and job title are required");
+  /** Adds or updates the role in the form; returns the new list, or null when it's invalid. */
+  const commit = (): Role[] | null => {
+    if (Object.values(problems(editing)).some(Boolean)) {
+      setShowErrors(true);
+      return null;
+    }
+    const next = isEdit ? roles.map((r) => (r.key === editing.key ? editing : r)) : [...roles, editing];
+    setEdited(next);
+    setEditing(blank());
+    setShowErrors(false);
+    return next;
+  };
+
+  const persist = async (): Promise<boolean> => {
+    let list = edited;
+    if (hasInput) {
+      list = commit();
+      if (!list) return false;
+    }
+    if (!list) return true;
+    try {
+      await replace.mutateAsync(list.map(toApi));
+      setEdited(null);
+      return true;
+    } catch {
       return false;
     }
-    const entry = { ...editing, id: editing.id || crypto.randomUUID(), end: current ? "" : editing.end };
-    const exists = draft.experiences.some((e) => e.id === entry.id);
-    update({ experiences: exists ? draft.experiences.map((e) => (e.id === entry.id ? entry : e)) : [...draft.experiences, entry] });
-    setEditing(blank());
-    setCurrent(false);
-    setError(null);
-    return true;
   };
 
-  const next = () => {
-    if (draft.experienceLevel === "experienced" && hasInput && !save()) return;
-    router.push(stepHref(3));
-  };
+  const apiError = (replace.error ?? saved.error) instanceof ApiError ? ((replace.error ?? saved.error) as ApiError) : null;
 
   return (
     <OnboardingShell
@@ -67,106 +153,127 @@ export function ExperienceStep() {
         </>
       }
       description="Add your roles. JobAI uses them to tailor every resume you send."
-      footer={<OnboardingFooter stepIndex={2} onContinue={next} />}
+      onSaveExit={() => void nav.exit(persist)}
+      onLeave={(href) => void nav.go(persist, href)}
+      loading={saved.isPending || prefs.isPending}
+      footer={
+        <OnboardingFooter
+          stepIndex={2}
+          onBack={() => void nav.back(persist)}
+          skip={fresher}
+          onSkip={nav.skip}
+          onContinue={() => void nav.next(persist)}
+          loading={nav.busy || saved.isPending}
+        />
+      }
     >
-      <div className="level-row">
-        <span className="ob-label" style={{ margin: 0 }}>
-          Your experience level
-        </span>
-        <div className="opt-row" role="radiogroup" aria-label="Experience level">
-          <OptionPill label="Fresher" selected={draft.experienceLevel === "fresher"} onSelect={() => update({ experienceLevel: "fresher" })} />
-          <OptionPill
-            label="Experienced"
-            selected={draft.experienceLevel === "experienced"}
-            onSelect={() => update({ experienceLevel: "experienced" })}
-          />
+      {apiError ? <Notice tone="err">{apiError.message}</Notice> : null}
+      {fresher ? (
+        <div className="ai-tip">
+          <span className="tip-ic">
+            <Sparkles className="ic ic-sm" />
+          </span>
+          <span>
+            You&apos;re a <b>fresher</b>, so this step is optional. Add internships or part-time roles if you have any, or skip
+            for now; JobAI will highlight your skills, projects and education instead.
+          </span>
         </div>
-        {draft.experienceLevel === "experienced" ? (
-          <button type="button" className="tag-add" style={{ marginLeft: "auto" }} onClick={() => hasInput && save()}>
+      ) : null}
+
+      {roles.length || hasInput ? (
+        <div className="level-row">
+          <span className="ob-label" style={{ margin: 0 }}>
+            {roles.length ? "Your roles" : null}
+          </span>
+          <button
+            type="button"
+            className="tag-add"
+            style={{ marginLeft: "auto" }}
+            onClick={() => (hasInput ? commit() : setEditing(blank()))}
+          >
             <Plus className="ic" />
             Add another experience
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
-      {draft.experiences.map((exp) => (
-        <div className="exp-card" key={exp.id}>
+      {roles.map((exp) => (
+        <div className="exp-card" key={exp.key}>
           <span className="co co-m" style={{ width: 44, height: 44, borderRadius: 12 }}>
             {exp.company[0]?.toUpperCase()}
           </span>
           <div className="exp-main">
             <b>{exp.title}</b>
             <small>
-              {[exp.company, exp.employmentType, exp.start ? `${monthLabel(exp.start)} – ${monthLabel(exp.end)}` : null, exp.location]
+              {[
+                exp.company,
+                exp.employmentType,
+                exp.start ? `${monthLabel(exp.start)} – ${exp.current ? "Present" : monthLabel(exp.end, "—")}` : null,
+                exp.location,
+              ]
                 .filter(Boolean)
                 .join(" · ")}
             </small>
           </div>
-          <button type="button" className="exp-act" aria-label={`Edit ${exp.title}`} onClick={() => (setEditing(exp), setCurrent(!exp.end))}>
+          <button type="button" className="exp-act" aria-label={`Edit ${exp.title}`} onClick={() => (setEditing(exp), setShowErrors(false))}>
             <Pencil className="ic ic-sm" />
           </button>
           <button
             type="button"
             className="exp-act"
             aria-label={`Delete ${exp.title}`}
-            onClick={() => update({ experiences: draft.experiences.filter((e) => e.id !== exp.id) })}
+            onClick={() => {
+              setEdited(roles.filter((r) => r.key !== exp.key));
+              if (editing.key === exp.key) setEditing(blank());
+            }}
           >
             <Trash className="ic ic-sm" />
           </button>
         </div>
       ))}
 
-      {draft.experienceLevel === "experienced" ? (
-        <>
-          <div className="ob-label" style={{ display: "flex", justifyContent: "space-between" }}>
-            {current ? "Current role" : "Role"}
-            <button type="button" className="cur-flag link-btn" aria-pressed={current} onClick={() => setCurrent((c) => !c)}>
-              <CircleCheck className="ic ic-xs" />
-              {current ? "I currently work here" : "Mark as current role"}
-            </button>
-          </div>
-          <div className="grid-3">
-            <TextField id="exp-company" label="Company name" required icon={Building} value={editing.company} onChange={(e) => set({ company: e.target.value })} error={error && !editing.company.trim() ? "Required" : undefined} />
-            <TextField id="exp-title" label="Job title" required icon={Briefcase} value={editing.title} onChange={(e) => set({ title: e.target.value })} error={error && !editing.title.trim() ? "Required" : undefined} />
-            <SelectField id="exp-type" label="Employment type" options={TYPES} value={editing.employmentType} onChange={(e) => set({ employmentType: e.target.value })} />
-            <TextField id="exp-start" label="Start date" icon={Calendar} type="month" value={editing.start} onChange={(e) => set({ start: e.target.value })} />
-            <TextField
-              id="exp-end"
-              label="End date"
-              icon={Calendar}
-              type={current ? "text" : "month"}
-              state={current ? "locked" : ""}
-              placeholder="Present"
-              value={current ? "" : editing.end}
-              onChange={(e) => set({ end: e.target.value })}
-            />
-            <TextField id="exp-location" label="Location" icon={MapPin} placeholder="Remote · US" value={editing.location} onChange={(e) => set({ location: e.target.value })} />
-          </div>
-          <FieldShell id="exp-resp" label="Key responsibilities">
-            <InputBox boxClassName="textarea">
-              <textarea
-                id="exp-resp"
-                maxLength={2000}
-                placeholder="What did you own, ship or improve?"
-                value={editing.responsibilities}
-                onChange={(e) => set({ responsibilities: e.target.value })}
-              />
-            </InputBox>
-          </FieldShell>
-          {draft.experiences.some((e) => e.id === editing.id) ? (
-            <Button type="button" variant="ghost" size="xs" onClick={save}>
-              Save changes
-            </Button>
-          ) : null}
-        </>
-      ) : (
-        <div className="ai-tip">
-          <span className="tip-ic">
-            <CircleCheck className="ic ic-sm" />
-          </span>
-          <span>No problem — JobAI will highlight your skills, projects and education instead.</span>
-        </div>
-      )}
+      <div className="ob-label" style={{ display: "flex", justifyContent: "space-between" }}>
+        {isEdit ? "Edit role" : editing.current ? "Current role" : "Role"}
+        <button type="button" className="cur-flag link-btn" aria-pressed={editing.current} onClick={() => set({ current: !editing.current })}>
+          <CircleCheck className="ic ic-xs" />
+          {editing.current ? "I currently work here" : "Mark as current role"}
+        </button>
+      </div>
+      <div className="grid-3">
+        <TextField id="exp-company" label="Company name" required icon={Building} value={editing.company} onChange={(e) => set({ company: e.target.value })} error={errors.company} />
+        <TextField id="exp-title" label="Job title" required icon={Briefcase} value={editing.title} onChange={(e) => set({ title: e.target.value })} error={errors.title} />
+        <SelectField id="exp-type" label="Employment type" options={TYPES} value={editing.employmentType} onChange={(e) => set({ employmentType: e.target.value })} />
+        <TextField id="exp-start" label="Start date" required icon={Calendar} type="month" value={editing.start} onChange={(e) => set({ start: e.target.value })} error={errors.start} />
+        <TextField
+          id="exp-end"
+          label="End date"
+          icon={Calendar}
+          type={editing.current ? "text" : "month"}
+          state={editing.current ? "locked" : ""}
+          placeholder="Present"
+          readOnly={editing.current}
+          value={editing.current ? "" : editing.end}
+          onChange={(e) => set({ end: e.target.value })}
+          error={errors.end}
+        />
+        <TextField id="exp-location" label="Location" icon={MapPin} placeholder="Pune, Maharashtra, India" value={editing.location} onChange={(e) => set({ location: e.target.value })} />
+      </div>
+      <FieldShell id="exp-resp" label="Key responsibilities">
+        <InputBox boxClassName="textarea">
+          <textarea
+            id="exp-resp"
+            maxLength={5000}
+            placeholder="What did you own, ship or improve?"
+            value={editing.responsibilities}
+            onChange={(e) => set({ responsibilities: e.target.value })}
+          />
+        </InputBox>
+      </FieldShell>
+      {isEdit ? (
+        <Button type="button" variant="ghost" size="xs" onClick={commit}>
+          Update role
+        </Button>
+      ) : null}
     </OnboardingShell>
   );
 }

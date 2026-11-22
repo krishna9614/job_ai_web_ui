@@ -1,17 +1,17 @@
 "use client";
 
 import { Check, CircleCheck, CloudUpload, FileText, Globe, Link as LinkIcon, Sparkles, X } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useRef, useState, type DragEvent } from "react";
 import { TextField } from "@/components/forms/field";
 import { LinkedinIcon } from "@/components/icons/brand";
 import { Notice } from "@/components/ui/notice";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
+import { useSetupList, useSkills } from "@/hooks/use-profile-setup";
 import { ApiError } from "@/lib/api/errors";
-import { profileFormSchema } from "@/lib/profile/schema";
+import { linkSchema, profileFormSchema } from "@/lib/profile/schema";
 import { useOnboardingStore } from "@/stores/onboarding-store";
 import { OnboardingFooter, OnboardingShell } from "../onboarding-shell";
-import { stepHref } from "../steps";
+import { useStepNav } from "../use-step-nav";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ACCEPT = [".pdf", ".doc", ".docx"];
@@ -25,18 +25,24 @@ function withScheme(v: string) {
   return t && !/^https?:\/\//i.test(t) ? `https://${t}` : t;
 }
 
-/** Step 5 — LinkedIn and GitHub links are saved to the profile via PATCH; the resume file stays local. */
+/** Step 5 — portfolio, LinkedIn and GitHub links are saved to the profile; the resume file stays local. */
 export function ResumeStep() {
-  const router = useRouter();
+  const nav = useStepNav(4);
   const profile = useProfile();
+  const skills = useSkills();
+  const experience = useSetupList("experience");
+  const education = useSetupList("education");
+  const certifications = useSetupList("certifications");
   const update = useUpdateProfile();
   const { draft, update: updateDraft } = useOnboardingStore();
   const [linkedinInput, setLinkedin] = useState<string | null>(null);
   const [githubInput, setGithub] = useState<string | null>(null);
   const linkedin = linkedinInput ?? profile.data?.linkedin_url ?? "";
   const github = githubInput ?? profile.data?.github_url ?? "";
+  const [portfolioInput, setPortfolio] = useState<string | null>(null);
+  const portfolio = portfolioInput ?? profile.data?.portfolio_url ?? "";
   const [fileError, setFileError] = useState<string | null>(null);
-  const [linkErrors, setLinkErrors] = useState<{ linkedin?: string; github?: string }>({});
+  const [linkErrors, setLinkErrors] = useState<{ portfolio?: string; linkedin?: string; github?: string }>({});
   const [drag, setDrag] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -55,24 +61,35 @@ export function ResumeStep() {
     pickFile(e.dataTransfer.files[0]);
   };
 
-  const next = () => {
+  const persist = async (): Promise<boolean> => {
+    const pf = withScheme(portfolio);
     const li = withScheme(linkedin);
     const gh = withScheme(github);
     const errs = {
+      portfolio: linkSchema.safeParse(pf).error?.issues[0]?.message,
       linkedin: profileFormSchema.shape.linkedin_url.safeParse(li).error?.issues[0]?.message,
       github: profileFormSchema.shape.github_url.safeParse(gh).error?.issues[0]?.message,
     };
     setLinkErrors(errs);
-    if (errs.linkedin || errs.github) return;
-    const go = () => router.push(stepHref(5));
+    if (errs.portfolio || errs.linkedin || errs.github) return false;
     const current = profile.data;
-    if (!current) return go();
+    if (!current) return true;
     const patch: Record<string, string | null> = {};
-    if ((li || null) !== current.linkedin_url) patch.linkedin_url = li || null;
-    if ((gh || null) !== current.github_url) patch.github_url = gh || null;
-    if (!Object.keys(patch).length) return go();
-    update.mutate(patch, { onSuccess: go });
+    if (portfolioInput !== null && (pf || null) !== current.portfolio_url) patch.portfolio_url = pf || null;
+    if (linkedinInput !== null && (li || null) !== current.linkedin_url) patch.linkedin_url = li || null;
+    if (githubInput !== null && (gh || null) !== current.github_url) patch.github_url = gh || null;
+    if (!Object.keys(patch).length) return true;
+    try {
+      await update.mutateAsync(patch);
+      setPortfolio(null);
+      setLinkedin(null);
+      setGithub(null);
+      return true;
+    } catch {
+      return false;
+    }
   };
+  const count = (rows: unknown[] | undefined) => rows?.length ?? 0;
 
   const apiError = update.error instanceof ApiError ? update.error : null;
 
@@ -85,7 +102,9 @@ export function ResumeStep() {
         </>
       }
       description="Upload your resume and share your work. We'll fill in anything we find."
-      footer={<OnboardingFooter stepIndex={4} skip onContinue={next} loading={update.isPending} />}
+      onSaveExit={() => void nav.exit(persist)}
+      onLeave={(href) => void nav.go(persist, href)}
+      footer={<OnboardingFooter stepIndex={4} onBack={() => void nav.back(persist)} skip onSkip={nav.skip} onContinue={() => void nav.next(persist)} loading={nav.busy} />}
     >
       {apiError ? <Notice tone="err">{apiError.message}</Notice> : null}
       {!profile.isPending && !profile.data ? (
@@ -152,19 +171,19 @@ export function ResumeStep() {
           <div className="ob-label">What JobAI extracted</div>
           <div className="mini-stats">
             <div className="mini-stat">
-              <b>{draft.technicalSkills.length + draft.softSkills.length + draft.tools.length}</b>
+              <b>{count(skills.data)}</b>
               <small>Skills</small>
             </div>
             <div className="mini-stat">
-              <b>{draft.experiences.length}</b>
+              <b>{count(experience.data)}</b>
               <small>Roles</small>
             </div>
             <div className="mini-stat">
-              <b>{draft.education.length}</b>
+              <b>{count(education.data)}</b>
               <small>Degree</small>
             </div>
             <div className="mini-stat">
-              <b>{draft.certifications.length}</b>
+              <b>{count(certifications.data)}</b>
               <small>Certificates</small>
             </div>
           </div>
@@ -176,10 +195,11 @@ export function ResumeStep() {
             label="Portfolio website"
             icon={Globe}
             placeholder="yourname.design"
-            value={draft.portfolioUrl}
-            onChange={(e) => updateDraft({ portfolioUrl: e.target.value })}
-            state={draft.portfolioUrl ? "ok" : ""}
-            trailing={draft.portfolioUrl ? <CircleCheck className="ic ic-sm state" /> : null}
+            value={portfolio}
+            onChange={(e) => setPortfolio(e.target.value)}
+            error={linkErrors.portfolio ?? apiError?.fieldErrors.portfolio_url}
+            state={portfolio && !linkErrors.portfolio ? "ok" : ""}
+            trailing={portfolio && !linkErrors.portfolio ? <CircleCheck className="ic ic-sm state" /> : null}
           />
           <TextField
             id="res-linkedin"
